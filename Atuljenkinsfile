@@ -33,10 +33,9 @@ pipeline {
     }
     stage('Login to Dockerhub') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'Docker-all-user', passwordVariable: 'docker-pass', usernameVariable: 'docker-user')]) {
-       // withCredential([usernameColonPassword(credentialsId: 'docker-id-user',variable:'docker-all')]) {
-        withCredentials([string(credentialsID: 'dockercode',variable: 'dockervarcode')]) {
-          sh 'docker login -u atul0074 -p ${dockervarcode}'
+        withCredentials([string(credentialsId: 'dockercode', variable: 'dockervarcode')]) {
+          echo 'Logging in to DockerHub...'
+          sh 'echo $dockervarcode | docker login -u atul0074 --password-stdin'
         }
       }
     }
