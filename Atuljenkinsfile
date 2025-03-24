@@ -1,43 +1,48 @@
- pipeline {
+pipeline {
   agent any
-    tools{
-      maven 'M2_HOME'
-          }
-   stages {
+  tools {
+    maven 'M2_HOME'
+  }
+  stages {
     stage('Git checkout') {
       steps {
-           echo 'This is for cloning the gitrepo'
-           git branch: 'main', url: 'https://github.com/Atul-technology/InsureMe-20Mar.git'
-             }
-            }
+        echo 'This is for cloning the git repo'
+        git branch: 'main', url: 'https://github.com/Atul-technology/InsureMe-20Mar.git'
+      }
+    }
     stage('Maven Package') {
       steps {
-           echo 'This is for packaging for application'
-           sh 'mvn package'
-             }
-            }
+        echo 'This is for packaging the application'
+        sh 'mvn package'
+      }
+    }
     stage('Test Results') {
       steps {
-           echo 'This is for packaging for application'
-           publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: '/var/lib/jenkins/workspace/InsureMe/target/surefire-reports', reportFiles: 'index.html', reportName: 'HTML Report', reportTitles: '', useWrapperFileDirectly: true])
-             }
-            }
-   stage('Docker Image Creation') {
+        echo 'This is for displaying test results'
+        publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', 
+        keepAll: false, reportDir: '/var/lib/jenkins/workspace/InsureMe/target/surefire-reports', 
+        reportFiles: 'index.html', reportName: 'HTML Report', reportTitles: '', 
+        useWrapperFileDirectly: true])
+      }
+    }
+    stage('Docker Image Creation') {
       steps {
-           echo 'This is for Docker image build'
-           sh 'docker build -t atul0074/my-app:1.0 .'
-             } 
-          }
-   stage('Login to Dockerhub') {
+        echo 'This is for Docker image build'
+        sh 'docker build -t atul0074/my-app:1.0 .'
+      }
+    }
+    stage('Login to Dockerhub') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'docker-id-user', passwordVariable: 'docker-pass', usernameVariable: 'docker-user')]) {
-        sh 'docker login -u ${docker-user} -p ${docker-pass}'
-                      }                                                 }
-                  }
-            }
+          sh 'docker login -u ${docker-user} -p ${docker-pass}'
+        }
+      }
+    }
     stage('Push the Docker image') {
       steps {
+        echo 'This is for pushing Docker image to DockerHub'
         sh 'docker push atul0074/my-app:1.0'
-                                }
-            }
+      }
     }
+  }
+}
