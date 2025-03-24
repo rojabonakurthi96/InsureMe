@@ -45,10 +45,11 @@ pipeline {
         sh 'docker push atul0074/my-app:1.0'
       }
     }
-    stage(' Ansible Playbook') {
+    stage('Run Ansible Playbook') {
       steps {
-        ansiblePlaybook credentialsId: 'sshkey', disableHostKeyChecking: true, installation: 'ansible', inventory: '/etc/ansible/hosts', playbook: 'deploy.yml', vaultTmpPath: ''
-                              }
-            }
-   }
+        ansiblePlaybook credentialsId: 'sshkey', disableHostKeyChecking: true, installation: 'ansible', 
+        inventory: '/etc/ansible/hosts', playbook: 'deploy.yml', vaultTmpPath: ''
+      }
+    }
+  }
 }
