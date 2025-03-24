@@ -1,4 +1,4 @@
-pipeline {
+ pipeline {
   agent any
     tools{
       maven 'M2_HOME'
@@ -28,5 +28,17 @@ pipeline {
            sh 'docker build -t atul0074/my-app:1.0 .'
              } 
           }
+   stage('Login to Dockerhub') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'docker-id-user', passwordVariable: 'docker-pass', usernameVariable: 'docker-user')]) {
+        sh 'docker login -u ${docker-user} -p ${docker-pass}'
+                      }                                                 }
+                  }
+            }
+    stage('Push the Docker image') {
+      steps {
+        sh 'docker push atul0074/my-app:1.0'
+                                }
+            }
     }
 }
