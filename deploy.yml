@@ -6,7 +6,7 @@
   - name: apt updating
     command: sudo apt update
   - name: Install python and Pip
-    command: sudo apt install -y python-pip
+    command: sudo apt install -y python3-pip
   - name: Installing Docker
     command: sudo apt-get install -y docker.io
     become: yes
@@ -16,4 +16,4 @@
     become: yes
     become_user: root
   - name: Deploy the Image from DockerHub and Run as Container
-    command: docker run -itd -p 8080:8081 atul0074/my-app:1.0
+    command: docker run -itd -p 8080:8081 pradeep781/insureme:1.0
