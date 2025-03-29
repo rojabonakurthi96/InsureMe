@@ -1,61 +1,84 @@
 pipeline {
-  agent any
-  environment {
-    MAVEN_HOME = tool 'Apache Maven 3.8.7'
-  }
-  tools {
-    maven 'Apache Maven 3.8.7'
-  }
-  stages {
-    stage('Git Checkout') {
-      steps {
-        echo 'Cloning the Git repository'
-        git branch: 'main', url: 'https://github.com/Pradeep-kumar11/InsureMe'
-      }
+    agent any
+
+    tools {
+        maven 'Apache Maven 3.8.7'
     }
-    stage('Maven Package') {
-      steps {
-        echo 'Packaging the application using Maven'
-        sh '${MAVEN_HOME}/bin/mvn clean package'
-      }
+
+    environment {
+        IMAGE_NAME = 'pradeep781/insureme:1.0'
     }
-    stage('Test Results') {
-      steps {
-        echo 'Publishing test results'
-        publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, 
-        reportDir: 'target/surefire-reports', reportFiles: 'index.html', 
-        reportName: 'HTML Report', reportTitles: '', useWrapperFileDirectly: true])
-      }
-    }
-    stage('Docker Image Creation') {
-      steps {
-        echo 'Building Docker image'
-        sh 'docker build -t pradeep781/insureme:1.0 .'
-      }
-    }
-    stage('Login & Push Docker Image') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'dockercode', usernameVariable: 'docker_user', passwordVariable: 'docker_pass')]) {
-          echo 'Logging in to DockerHub'
-          sh 'echo $docker_pass | docker login -u $docker_user --password-stdin'
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                echo 'Cloning the Git repository'
+                git branch: 'main', url: 'https://github.com/Pradeep-kumar11/InsureMe'
+            }
         }
-      }
-    }
-    stage('Push the Docker Image') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'dockercode', usernameVariable: 'docker_user', passwordVariable: 'docker_pass')]) {
-          echo 'Pushing Docker image to DockerHub'
-          sh 'docker push pradeep781/insureme:1.0'
-          sh 'docker logout'
+
+        stage('Maven Build') {
+            steps {
+                echo 'Building the application using Maven'
+                sh 'mvn clean package'
+            }
         }
-      }
+
+        stage('Test Results') {
+            steps {
+                echo 'Publishing test results'
+                script {
+                    try {
+                        publishHTML([
+                            reportDir: 'target/surefire-reports',
+                            reportFiles: 'index.html',
+                            reportName: 'Test Report'
+                        ])
+                    } catch (Exception e) {
+                        echo "Skipping test report: ${e.message}"
+                    }
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                echo 'Building Docker image'
+                sh "docker build -t $IMAGE_NAME ."
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockercode', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    echo 'Logging in to DockerHub...'
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                echo 'Pushing Docker image to DockerHub'
+                sh "docker push $IMAGE_NAME"
+            }
+        }
+
+        stage('Run Ansible Playbook') {
+            steps {
+                echo 'Executing Ansible Playbook for deployment'
+                ansiblePlaybook credentialsId: 'sshkey', disableHostKeyChecking: true, installation: 'ansible', 
+                inventory: '/etc/ansible/hosts', playbook: 'deploy.yml'
+            }
+        }
     }
-    stage('Run Ansible Playbook') {
-      steps {
-        echo 'Deploying using Ansible'
-        ansiblePlaybook credentialsId: 'sshkey', disableHostKeyChecking: true, installation: 'ansible', 
-        inventory: '/etc/ansible/hosts', playbook: 'deploy.yml'
-      }
+
+    post {
+        success {
+            echo 'Build and deployment completed successfully!'
+        }
+        failure {
+            echo 'Build failed! Please check the logs.'
+        }
     }
-  }
 }
