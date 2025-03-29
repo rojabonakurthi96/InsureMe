@@ -6,14 +6,14 @@ pipeline {
     }
 
     environment {
-        IMAGE_NAME = 'pradeep781/insureme:1.0'
+        IMAGE_NAME = 'rojabonakurthi96/insureme:1.0'
     }
 
     stages {
         stage('Git Checkout') {
             steps {
                 echo 'Cloning the Git repository'
-                git branch: 'main', url: 'https://github.com/Pradeep-kumar11/InsureMe'
+                git branch: 'main', url: 'https://github.com/rojabonakurthi96/InsureMe'
             }
         }
 
