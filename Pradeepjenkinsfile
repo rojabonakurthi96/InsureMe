@@ -1,55 +1,60 @@
 pipeline {
   agent any
+  environment {
+    MAVEN_HOME = tool 'Apache Maven 3.8.7'
+  }
   tools {
     maven 'Apache Maven 3.8.7'
   }
   stages {
-    stage('Git checkout') {
+    stage('Git Checkout') {
       steps {
-        echo 'This is for cloning the git repo'
+        echo 'Cloning the Git repository'
         git branch: 'main', url: 'https://github.com/Pradeep-kumar11/InsureMe'
       }
     }
     stage('Maven Package') {
       steps {
-        echo 'This is for packaging the application'
-        sh 'mvn package'
+        echo 'Packaging the application using Maven'
+        sh '${MAVEN_HOME}/bin/mvn clean package'
       }
     }
     stage('Test Results') {
       steps {
-        echo 'This is for displaying test results'
-        publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', 
-        keepAll: false, reportDir: '/var/lib/jenkins/workspace/InsureMe/target/surefire-reports', 
-        reportFiles: 'index.html', reportName: 'HTML Report', reportTitles: '', 
-        useWrapperFileDirectly: true])
+        echo 'Publishing test results'
+        publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, 
+        reportDir: 'target/surefire-reports', reportFiles: 'index.html', 
+        reportName: 'HTML Report', reportTitles: '', useWrapperFileDirectly: true])
       }
     }
     stage('Docker Image Creation') {
-
       steps {
-        echo 'This is for Docker image build'
+        echo 'Building Docker image'
         sh 'docker build -t pradeep781/insureme:1.0 .'
       }
     }
-    stage('Login to Dockerhub') {
+    stage('Login & Push Docker Image') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'dockercode', usernameVariable: 'docker_user', passwordVariable: 'docker_pass')]) {
-          echo 'Logging in to DockerHub...'
+          echo 'Logging in to DockerHub'
           sh 'echo $docker_pass | docker login -u $docker_user --password-stdin'
         }
       }
     }
-    stage('Push the Docker image') {
+    stage('Push the Docker Image') {
       steps {
-        echo 'This is for pushing Docker image to DockerHub'
-        sh 'docker push pradeep781/insureme:1.0'
+        withCredentials([usernamePassword(credentialsId: 'dockercode', usernameVariable: 'docker_user', passwordVariable: 'docker_pass')]) {
+          echo 'Pushing Docker image to DockerHub'
+          sh 'docker push pradeep781/insureme:1.0'
+          sh 'docker logout'
+        }
       }
     }
     stage('Run Ansible Playbook') {
       steps {
+        echo 'Deploying using Ansible'
         ansiblePlaybook credentialsId: 'sshkey', disableHostKeyChecking: true, installation: 'ansible', 
-        inventory: '/etc/ansible/hosts', playbook: 'deploy.yml', vaultTmpPath: ''
+        inventory: '/etc/ansible/hosts', playbook: 'deploy.yml'
       }
     }
   }
