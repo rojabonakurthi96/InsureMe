@@ -17,10 +17,10 @@ pipeline {
             }
         }
 
-        stage('Maven Build') {
+        stage('Maven Build & Test') {
             steps {
-                echo 'Building the application using Maven'
-                sh 'mvn clean package'
+                echo 'Building the application and running tests using Maven'
+                sh 'mvn clean package test'
             }
         }
 
@@ -52,7 +52,11 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockercode', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     echo 'Logging in to DockerHub...'
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    script {
+                        retry(3) {
+                            sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                        }
+                    }
                 }
             }
         }
@@ -60,15 +64,24 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 echo 'Pushing Docker image to DockerHub'
-                sh "docker push $IMAGE_NAME"
+                script {
+                    retry(3) {
+                        sh "docker push $IMAGE_NAME"
+                    }
+                }
             }
         }
 
         stage('Run Ansible Playbook') {
             steps {
                 echo 'Executing Ansible Playbook for deployment'
-                ansiblePlaybook credentialsId: 'sshkey', disableHostKeyChecking: true, installation: 'ansible', 
-                inventory: '/etc/ansible/hosts', playbook: 'deploy.yml'
+                script {
+                    try {
+                        ansiblePlaybook become: true, credentialsId: 'ansible', disableHostKeyChecking: true, installation: 'ansible', inventory: '/etc/ansible/hosts', playbook: 'deploy.yml', sudoUser: null, vaultTmpPath: ''
+                    } catch (Exception e) {
+                        echo "Ansible deployment failed: ${e.message}"
+                    }
+                }
             }
         }
     }
